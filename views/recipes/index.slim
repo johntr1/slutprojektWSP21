@@ -1,6 +1,6 @@
-h2 Här är alla dina sparade recept! 
+h2 Här är alla dina skapade recept! 
 
 - recipes.each do |recipe|
-    a href="recipe/#{recipe['id']}" #{recipe["title"]}
-    
+    ul 
+    a href="recipes/#{recipe['recipe_id']}" #{recipe['title']}
 
