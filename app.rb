@@ -34,6 +34,12 @@ get('/recipes') do
     slim(:"recipes/index", locals:{recipes:result})
 end
 
+get('/recipes/new') do
+    db = SQLite3::Database.new('db/matreceptsida.db')
+    db.results_as_hash = true
+    result = db.execute("SELECT * FROM categories")
+    slim(:"recipes/new", locals:{categories:result})
+end
 get('/showlogin') do
     slim(:login)
 end

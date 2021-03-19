@@ -1,6 +1,14 @@
-h2 Här är alla dina skapade recept! 
+h1 Din profil 
 
+h2 Skapade recept 
 - recipes.each do |recipe|
     ul 
     a href="recipes/#{recipe['recipe_id']}" #{recipe['title']}
+
+
+h2 Skapa ett recept!
+a href="recipes/new" Skapa recept! 
+
+
+
 
