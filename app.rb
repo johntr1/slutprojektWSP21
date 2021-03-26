@@ -40,6 +40,13 @@ get('/recipes/new') do
     result = db.execute("SELECT * FROM categories")
     slim(:"recipes/new", locals:{categories:result})
 end
+
+post('/recipes/create') do
+    categories = params[:categories]
+    title = params[:title]
+    content = params[:content]
+end
+
 get('/showlogin') do
     slim(:login)
 end
