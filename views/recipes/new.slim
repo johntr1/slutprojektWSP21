@@ -1,14 +1,32 @@
+link rel="stylesheet" href="../css/styles.css"/        
+
 h2 Publicera ett recept 
+
+h3 Ladda upp bild 
+
+form action="upload_image" method="post" enctype="multipart/form-data"
+    input type="file" name="file"/
+    input type="submit" value="upload"
 
 form action="/recipes/create" method="post" 
     input type="text" name="title" placeholder="Namn på ditt recept"
     input type="text" name="content" placeholder="Instruktioner"
-    label for="categories" Välj en kategori: 
+    label for="categories" Välj tre kategorier som passar receptet: 
 
-    select name="categories" id="categories"
+    select name="categories1" id="categories1"
         - categories.each do |category|
             option value="#{category['id']}" #{category['name']}
+
+    select name="categories2" id="categories2"
+        - categories.each do |category|
+            option value="#{category['id']}" #{category['name']}
+
+    select name="categories3" id="categories3"
+        - categories.each do |category|
+            option value="#{category['id']}" #{category['name']}
+    
     input type="submit" value="Skapa ett recept"
+
 
 
 

@@ -2,6 +2,7 @@ require 'sinatra'
 require 'slim'
 require 'sqlite3'
 require 'bcrypt'
+require 'byebug'
 
 enable :sessions
 
@@ -28,9 +29,13 @@ end
 
 get('/recipes') do
     id = session[:id].to_i
-    db = SQLite3::Database.new('db/matreceptsida.db')
-    db.results_as_hash = true
-    result = db.execute("SELECT * FROM recipes WHERE user_id = ?", id)
+    if id == 0
+        redirect('/')
+    else
+        db = SQLite3::Database.new('db/matreceptsida.db')
+        db.results_as_hash = true
+        result = db.execute("SELECT * FROM recipes WHERE user_id = ?", id)
+    end
     slim(:"recipes/index", locals:{recipes:result})
 end
 
@@ -41,8 +46,19 @@ get('/recipes/new') do
     slim(:"recipes/new", locals:{categories:result})
 end
 
+post('/recipes/upload_image') do
+    path = File.join("../public/uploaded_pictures/",params[:file][:filename])
+
+    File.write(path,File.read(params[:file[:tempfile]]))
+
+    redirect('/recipes/new')
+end
+
+
 post('/recipes/create') do
-    categories = params[:categories]
+    categories1 = params[:categories1]
+    categories2 = params[:categories2]
+    categories3 = params[:categories3]
     title = params[:title]
     recipe_id = params[:recipe_id]
     user_id = session[:id].to_i
@@ -52,7 +68,9 @@ post('/recipes/create') do
     db.execute("INSERT INTO recipes (content, title, user_id) VALUES (?,?,?)", content, title, user_id)
     result = db.execute("SELECT * FROM recipes WHERE content = ?",content).first
     recipe_id = result["recipe_id"] 
-    db.execute("INSERT INTO recipes_categories_relation (recipe_id, category_id) VALUES (?, ?)", recipe_id, categories)
+    db.execute("INSERT INTO recipes_categories_relation (recipe_id, category_id) VALUES (?, ?)", recipe_id, categories1)
+    db.execute("INSERT INTO recipes_categories_relation (recipe_id, category_id) VALUES (?, ?)", recipe_id, categories2)
+    db.execute("INSERT INTO recipes_categories_relation (recipe_id, category_id) VALUES (?, ?)", recipe_id, categories3)
     redirect('/recipes')
 end
 
@@ -88,9 +106,12 @@ get('/recipes/:id') do
     result = db.execute("SELECT * FROM recipes WHERE recipe_id = ? ", id).first
     creator_id = result["user_id"]
     creator = db.execute("SELECT * from users WHERE id = ?", creator_id).first
-    category = db.execute("SELECT * FROM recipes_categories_relation WHERE recipe_id = ?", id).first
-    category_id = category["category_id"]
-    categories = db.execute("SELECT * FROM categories WHERE id = ?", category_id).first
+    category_id = db.execute("SELECT category_id FROM recipes_categories_relation WHERE recipe_id = ?", id)
+    category_id1 = category_id[0]["category_id"]
+    category_id2 = category_id[1]["category_id"]
+    category_id3 = category_id[2]["category_id"]
+
+    categories = db.execute("SELECT * FROM categories WHERE id = ? or id = ? or id = ?", category_id1, category_id2, category_id3 )
 
     slim(:"recipes/show", locals:{result:result, creator:creator, categories:categories})
 end
