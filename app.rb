@@ -44,7 +44,16 @@ end
 post('/recipes/create') do
     categories = params[:categories]
     title = params[:title]
+    recipe_id = params[:recipe_id]
+    user_id = session[:id].to_i
     content = params[:content]
+    db = SQLite3::Database.new('db/matreceptsida.db')
+    db.results_as_hash = true
+    db.execute("INSERT INTO recipes (content, title, user_id) VALUES (?,?,?)", content, title, user_id)
+    result = db.execute("SELECT * FROM recipes WHERE content = ?",content).first
+    recipe_id = result["recipe_id"] 
+    db.execute("INSERT INTO recipes_categories_relation (recipe_id, category_id) VALUES (?, ?)", recipe_id, categories)
+    redirect('/recipes')
 end
 
 get('/showlogin') do
@@ -71,6 +80,23 @@ post('/login') do
       redirect("/error")
     end
 end
+
+get('/recipes/:id') do 
+    id = params[:id].to_i
+    db = SQLite3::Database.new('db/matreceptsida.db')
+    db.results_as_hash = true
+    result = db.execute("SELECT * FROM recipes WHERE recipe_id = ? ", id).first
+    creator_id = result["user_id"]
+    creator = db.execute("SELECT * from users WHERE id = ?", creator_id).first
+    category = db.execute("SELECT * FROM recipes_categories_relation WHERE recipe_id = ?", id).first
+    category_id = category["category_id"]
+    categories = db.execute("SELECT * FROM categories WHERE id = ?", category_id).first
+
+    slim(:"recipes/show", locals:{result:result, creator:creator, categories:categories})
+end
+
+    
+
 
 
 
