@@ -82,8 +82,7 @@ get('/recipes/:id/edit') do
     db.results_as_hash = true
     result = db.execute("SELECT * FROM recipes WHERE recipe_id = ?", id).first
     result2 = db.execute("SELECT * FROM categories")
-    result3 = db.execute("SELECT * FROM recipes_categories_relation WHERE recipe_id = ?", id)
-    slim(:"recipes/edit", locals:{recipes:result, categories:result2, specific_categories:result3})
+    slim(:"recipes/edit", locals:{recipes:result, categories:result2})
 end
 
 get('/recipes/edit') do
@@ -99,17 +98,14 @@ post('/recipes/:id/update') do
     categories1 = params[:categories1]
     categories2 = params[:categories2]
     categories3 = params[:categories3]
-    old_category_id1 = params[:old_category_id1]
-    old_category_id2 = params[:old_category_id2]
-    old_category_id3 = params[:old_category_id3]
     title = params[:title]
     content = params[:content]
     db = SQLite3::Database.new('db/matreceptsida.db')
     db.execute("UPDATE recipes SET title=?, content=? WHERE recipe_id = ?", title, content, recipe_id)
-    db.execute("UPDATE recipes_categories_relation SET category_id = ? WHERE recipe_id = ? and category_id = ?", categories1, recipe_id, old_category_id1).first
-    db.execute("UPDATE recipes_categories_relation SET category_id = ? WHERE recipe_id = ? and category_id = ?", categories2, recipe_id, old_category_id2).first
-    db.execute("UPDATE recipes_categories_relation SET category_id = ? WHERE recipe_id = ? and category_id = ?", categories3, recipe_id, old_category_id3).first
-   ## db.execute("UPDATE recipes_categories_relation SET category_id = ? WHERE recipe_id = ? ")
+    db.execute("DELETE FROM recipes_categories_relation WHERE recipe_id = ?", recipe_id)
+    db.execute("INSERT INTO recipes_categories_relation (recipe_id, category_id) VALUES (?, ?)", recipe_id, categories1)
+    db.execute("INSERT INTO recipes_categories_relation (recipe_id, category_id) VALUES (?, ?)", recipe_id, categories2)
+    db.execute("INSERT INTO recipes_categories_relation (recipe_id, category_id) VALUES (?, ?)", recipe_id, categories3)
 
    redirect("/recipes/edit")
 
