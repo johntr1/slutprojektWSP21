@@ -106,9 +106,9 @@ post('/recipes/:id/update') do
     content = params[:content]
     db = SQLite3::Database.new('db/matreceptsida.db')
     db.execute("UPDATE recipes SET title=?, content=? WHERE recipe_id = ?", title, content, recipe_id)
-    db.execute("UPDATE recipes_categories_relation SET category_id = ? WHERE recipe_id = ? and category_id = ?", categories1, recipe_id, old_category_id1)
-    db.execute("UPDATE recipes_categories_relation SET category_id = ? WHERE recipe_id = ? and category_id = ?", categories2, recipe_id, old_category_id2)
-    db.execute("UPDATE recipes_categories_relation SET category_id = ? WHERE recipe_id = ? and category_id = ?", categories3, recipe_id, old_category_id3)
+    db.execute("UPDATE recipes_categories_relation SET category_id = ? WHERE recipe_id = ? and category_id = ?", categories1, recipe_id, old_category_id1).first
+    db.execute("UPDATE recipes_categories_relation SET category_id = ? WHERE recipe_id = ? and category_id = ?", categories2, recipe_id, old_category_id2).first
+    db.execute("UPDATE recipes_categories_relation SET category_id = ? WHERE recipe_id = ? and category_id = ?", categories3, recipe_id, old_category_id3).first
    ## db.execute("UPDATE recipes_categories_relation SET category_id = ? WHERE recipe_id = ? ")
 
    redirect("/recipes/edit")
