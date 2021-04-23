@@ -1,0 +1,25 @@
+link rel="stylesheet" href="../css/styles.css"/        
+
+form action="update" method="post"
+    input type="text" name="title" value="#{recipes['title']}"
+    input type="text" name="content" value="#{recipes['content']}"
+    label for="categories" Uppdatera de tre kategorier så att det passar receptet: 
+
+    select name="categories1" id="categories1"
+        - categories.each do |category|
+            option value="#{category['id']}" #{category['name']}
+
+    select name="categories2" id="categories2"
+        - categories.each do |category|
+            option value="#{category['id']}" #{category['name']}
+
+    select name="categories3" id="categories3"
+        - categories.each do |category|
+            option value="#{category['id']}" #{category['name']}
+    
+    input type="submit" value="Uppdatera receptet"
+
+- old_category_id1 = specific_categories[0]["category_id"]
+- old_category_id2 = specific_categories[1]["category_id"]
+- old_category_id3 = specific_categories[2]["category_id"]
+

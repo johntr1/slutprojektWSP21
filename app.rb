@@ -74,6 +74,47 @@ post('/recipes/create') do
     redirect('/recipes')
 end
 
+get('/recipes/:id/edit') do
+    id = params[:id].to_i
+    title = params[:title]
+    params[:content]
+    db = SQLite3::Database.new('db/matreceptsida.db')
+    db.results_as_hash = true
+    result = db.execute("SELECT * FROM recipes WHERE recipe_id = ?", id).first
+    result2 = db.execute("SELECT * FROM categories")
+    result3 = db.execute("SELECT * FROM recipes_categories_relation WHERE recipe_id = ?", id)
+    slim(:"recipes/edit", locals:{recipes:result, categories:result2, specific_categories:result3})
+end
+
+get('/recipes/edit') do
+    user_id = session[:id].to_i
+    db = SQLite3::Database.new('db/matreceptsida.db')
+    db.results_as_hash = true
+    result = db.execute("SELECT * FROM recipes WHERE user_id = ?", user_id)
+    slim(:"recipes/show_edit", locals:{recipes:result})
+end
+
+post('/recipes/:id/update') do
+    recipe_id = params[:id].to_i
+    categories1 = params[:categories1]
+    categories2 = params[:categories2]
+    categories3 = params[:categories3]
+    old_category_id1 = params[:old_category_id1]
+    old_category_id2 = params[:old_category_id2]
+    old_category_id3 = params[:old_category_id3]
+    title = params[:title]
+    content = params[:content]
+    db = SQLite3::Database.new('db/matreceptsida.db')
+    db.execute("UPDATE recipes SET title=?, content=? WHERE recipe_id = ?", title, content, recipe_id)
+    db.execute("UPDATE recipes_categories_relation SET category_id = ? WHERE recipe_id = ? and category_id = ?", categories1, recipe_id, old_category_id1)
+    db.execute("UPDATE recipes_categories_relation SET category_id = ? WHERE recipe_id = ? and category_id = ?", categories2, recipe_id, old_category_id2)
+    db.execute("UPDATE recipes_categories_relation SET category_id = ? WHERE recipe_id = ? and category_id = ?", categories3, recipe_id, old_category_id3)
+   ## db.execute("UPDATE recipes_categories_relation SET category_id = ? WHERE recipe_id = ? ")
+
+   redirect("/recipes/edit")
+
+end
+
 get('/showlogin') do
     slim(:login)
 end

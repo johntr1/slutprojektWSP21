@@ -1,0 +1,10 @@
+h2 Dina skapade recept 
+- recipes.each do |recipe|
+    ul 
+    p #{recipe['title']}
+    a href="#{recipe['recipe_id']}/edit" Uppdatera 
+    form method="POST" action="#{recipe['recipe_id']}/delete"
+        input type="submit" value="Delete"
+
+
+a href="/recipes" Gå tillbaks 
