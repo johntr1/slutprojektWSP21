@@ -136,6 +136,15 @@ post('/login') do
     end
 end
 
+get("/recipes/public") do
+    db = SQLite3::Database.new('db/matreceptsida.db')
+    db.results_as_hash = true
+    recipes = db.execute("SELECT * FROM recipes")
+    slim(:"recipes/public_show", locals:{recipes:recipes})
+
+
+end
+
 get('/recipes/:id') do 
     id = params[:id].to_i
     db = SQLite3::Database.new('db/matreceptsida.db')
@@ -153,7 +162,20 @@ get('/recipes/:id') do
     slim(:"recipes/show", locals:{result:result, creator:creator, categories:categories})
 end
 
-    
+post('/recipes/:id/like') do
+    recipe_id = params[:id].to_i
+    db = SQLite3::Database.new('db/matreceptsida.db')
+    user_id = session[:id].to_i
+    db.results_as_hash = true
+    check = db.execute("SELECT * FROM users_recipes_likes_relation WHERE user_id = ? and recipe_id = ?", user_id, recipe_id).first
+    if check == nil 
+        db.execute("INSERT INTO users_recipes_likes_relation (recipe_id, user_id) VALUES (?, ?)", recipe_id, user_id)
+    else
+        redirect("/show_login")
+    end
+    redirect("/recipes")
+end
+
 
 
 

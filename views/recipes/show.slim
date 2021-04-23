@@ -12,5 +12,10 @@ p Receptet tillhör kategorierna:
 h2 Instruktioner:
 p #{result["content"]}
 
+h2 Bokmarkera
+form action="#{result['recipe_id']}/like" method="post"
+    input type="submit" value="Like"
+
+
 
 

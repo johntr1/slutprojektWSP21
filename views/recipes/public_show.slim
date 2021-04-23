@@ -1,0 +1,8 @@
+link rel="stylesheet" href="../css/styles.css"/
+
+h1 Alla publika recept 
+
+h2 Publika recept 
+- recipes.each do |recipe|
+    ul 
+    a href="#{recipe['recipe_id']}" #{recipe['title']}
