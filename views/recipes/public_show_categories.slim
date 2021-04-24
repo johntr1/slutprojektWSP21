@@ -1,0 +1,8 @@
+link rel="stylesheet" href="../css/style.css"/
+
+h1 #{category['name']}
+
+h2 All Recept som tillhör kategorin #{category['name']} 
+- recipes.each do |recipe|
+    ul 
+    a href="/recipes/#{recipe['recipe_id']}" #{recipe['title']}

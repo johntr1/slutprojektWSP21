@@ -1,8 +1,15 @@
-link rel="stylesheet" href="../css/styles.css"/
+link rel="stylesheet" href="../css/style.css"/
 
 h1 Alla publika recept 
 
-h2 Publika recept 
+h2 Välj en kategori som passar dig:
+- categories.each do |category|
+    ul 
+    a href="/category/#{category['id']}" #{category['name']}
+
+
+h2 Alla Publika Recept 
 - recipes.each do |recipe|
     ul 
     a href="#{recipe['recipe_id']}" #{recipe['title']}
+

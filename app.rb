@@ -35,8 +35,9 @@ get('/recipes') do
         db = SQLite3::Database.new('db/matreceptsida.db')
         db.results_as_hash = true
         result = db.execute("SELECT * FROM recipes WHERE user_id = ?", id)
+        liked_recipes = db.execute("SELECT * FROM users_recipes_likes_relation INNER JOIN recipes ON users_recipes_likes_relation.recipe_id = recipes.recipe_id WHERE users_recipes_likes_relation.user_id = ?", id)
     end
-    slim(:"recipes/index", locals:{recipes:result})
+    slim(:"recipes/index", locals:{recipes:result, liked_recipes:liked_recipes})
 end
 
 get('/recipes/new') do
@@ -140,7 +141,8 @@ get("/recipes/public") do
     db = SQLite3::Database.new('db/matreceptsida.db')
     db.results_as_hash = true
     recipes = db.execute("SELECT * FROM recipes")
-    slim(:"recipes/public_show", locals:{recipes:recipes})
+    categories = db.execute("SELECT * FROM categories")
+    slim(:"recipes/public_show", locals:{recipes:recipes, categories:categories})
 
 
 end
@@ -174,6 +176,41 @@ post('/recipes/:id/like') do
         redirect("/show_login")
     end
     redirect("/recipes")
+end
+
+post('/recipes/:id/dislike') do
+    recipe_id = params[:id].to_i
+    db = SQLite3::Database.new('db/matreceptsida.db')
+    user_id = session[:id].to_i
+    db.results_as_hash = true
+    check = db.execute("SELECT * FROM users_recipes_likes_relation WHERE user_id = ? and recipe_id = ?", user_id, recipe_id).first
+    if check != nil 
+        db.execute("DELETE FROM users_recipes_likes_relation WHERE recipe_id = ? and user_id = ?", recipe_id, user_id)
+    else
+        redirect("/show_login")
+    end
+    redirect("/recipes")
+end
+
+post('/recipes/:id/delete') do
+    recipe_id = params[:id].to_i
+    db = SQLite3::Database.new('db/matreceptsida.db')
+    db.execute("DELETE FROM recipes WHERE recipe_id = ?", recipe_id)
+    redirect('/recipes')
+end
+
+get('/category/:id') do
+    category_id = params[:id].to_i
+    db = SQLite3::Database.new('db/matreceptsida.db')
+    db.results_as_hash = true
+    recipes = db.execute("SELECT * FROM recipes_categories_relation INNER JOIN recipes ON recipes_categories_relation.recipe_id = recipes.recipe_id WHERE recipes_categories_relation.category_id = ?", category_id)
+    category = db.execute("SELECT * FROM categories WHERE id = ?", category_id).first
+    slim(:"recipes/public_show_categories", locals:{recipes:recipes, category:category})
+end
+
+post('/logout') do
+    session[:id] = 0
+    redirect("/")
 end
 
 
