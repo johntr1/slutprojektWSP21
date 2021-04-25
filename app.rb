@@ -13,8 +13,6 @@ i = 0
 # Displays Register Page
 #
 get('/') do
-    session[:time] = t
-    session[:i] = i 
     slim(:register)
 end
 
