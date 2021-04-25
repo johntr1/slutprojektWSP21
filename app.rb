@@ -6,6 +6,10 @@ require 'byebug'
 
 enable :sessions
 
+i = 0
+t = Time.now
+
+
 get('/') do
     slim(:register)
 end
@@ -14,15 +18,30 @@ post('/users/new') do
     username = params[:username]
     password = params[:password]
     password_confirm = params[:password_confirm]
-    if password = password_confirm
-        pw_digest = BCrypt::Password.create(password)
+    if username.length <= 3 
+        session[:em] = "Ditt användarnamn är för kort. Vänligen försök igen!"
+        session[:re] = "/"
+        redirect('/error')
+    end
+
+    if password.length <= 3 and password_confirm.length == 0 
+        session[:em] = "Ditt lösenord är för kort. Vänligen försök igen!"
+        session[:re] = "/"
+        redirect('/error')
+    elsif password_confirm.length <= 3 or password != password_confirm
+        session[:em] = "Lösenorden matchade inte. Vänligen försök igen!"
+        session[:re] = "/"
+        redirect('/error')
+    end
+
+    if password_confirm == password
         db = SQLite3::Database.new('db/matreceptsida.db')
+        pw_digest = BCrypt::Password.create(password)
         db.execute("INSERT INTO users (username,pw_digest) VALUES (?,?)",username,pw_digest)
         redirect('/showlogin')
     else
-        error_message = "Lösenorden stämmer ej! Vänligen försök igen."
-        session[:error_message] = error_message
-        session[:redirect] = "/"
+        session[:em] = "Lösenorden stämmer ej! Vänligen försök igen."
+        session[:re] = "/"
         redirect('/error')
     end
 end
@@ -30,7 +49,9 @@ end
 get('/recipes') do
     id = session[:id].to_i
     if id == 0
-        redirect('/')
+        session[:em] = "Du är tyvärr inte inloggad. Vänligen skapa ett konto eller logga in!"
+        session[:re] = "/"
+        redirect('/error')
     else
         db = SQLite3::Database.new('db/matreceptsida.db')
         db.results_as_hash = true
@@ -46,15 +67,6 @@ get('/recipes/new') do
     result = db.execute("SELECT * FROM categories")
     slim(:"recipes/new", locals:{categories:result})
 end
-
-post('/recipes/upload_image') do
-    path = File.join("../public/uploaded_pictures/",params[:file][:filename])
-
-    File.write(path,File.read(params[:file[:tempfile]]))
-
-    redirect('/recipes/new')
-end
-
 
 post('/recipes/create') do
     categories1 = params[:categories1]
@@ -117,19 +129,35 @@ get('/showlogin') do
 end
 
 post('/login') do
-    i = 0
     username = params[:username]
     password = params[:password]
     db = SQLite3::Database.new('db/matreceptsida.db')
     db.results_as_hash = true
     result = db.execute("SELECT * FROM users WHERE username = ?",username).first
-    pwdigest = result["pw_digest"]
-    id = result["id"]
-  
-    if BCrypt::Password.new(pwdigest) == password
+    if result != nil
+        pwdigest = result["pw_digest"]
+        id = result["id"]
+    else
+        session[:em] = "Kontot existerar inte. Vänligen registrera ett konto"
+        session[:re] = "/"
+        redirect("/error")
+    end
+
+
+    if BCrypt::Password.new(pwdigest) == password and Time.now >= t
         session[:id] = id
         session[:username] = username
+        i = 0 
         redirect('/recipes')
+    
+    elsif i >= 5
+        session[:em] = "Du har skrivit fel lösenord för många gånger! Vänligen vänta en stund."
+        session[:re] = "/showlogin"
+        session[:time] = Time.now + (10)
+        t = session[:time]
+        i +=1 
+        redirect("/error")
+
     else
         session[:em] = "Du har skrivit fel lösenord! Vänligen försök igen."
         session[:re] = "/showlogin"
@@ -190,7 +218,9 @@ post('/recipes/:id/dislike') do
     if check != nil 
         db.execute("DELETE FROM users_recipes_likes_relation WHERE recipe_id = ? and user_id = ?", recipe_id, user_id)
     else
-        redirect("/show_login")
+        session[:em] = "Du har inte bokmarkeat detta receptet!"
+        session[:re] = "/recipes"
+        redirect("/error")
     end
     redirect("/recipes")
 end
