@@ -117,6 +117,7 @@ get('/showlogin') do
 end
 
 post('/login') do
+    i = 0
     username = params[:username]
     password = params[:password]
     db = SQLite3::Database.new('db/matreceptsida.db')
@@ -126,14 +127,14 @@ post('/login') do
     id = result["id"]
   
     if BCrypt::Password.new(pwdigest) == password
-      session[:id] = id
-      session[:username] = username
-      redirect('/recipes')
+        session[:id] = id
+        session[:username] = username
+        redirect('/recipes')
     else
-      em = "Du har skrivit fel lösenord! Vänligen försök igen."
-      session[:error_message] = error_message
-      session[:redirect] = "/showlogin"
-      redirect("/error")
+        session[:em] = "Du har skrivit fel lösenord! Vänligen försök igen."
+        session[:re] = "/showlogin"
+        i += 1
+        redirect("/error")
     end
 end
 
@@ -173,7 +174,9 @@ post('/recipes/:id/like') do
     if check == nil 
         db.execute("INSERT INTO users_recipes_likes_relation (recipe_id, user_id) VALUES (?, ?)", recipe_id, user_id)
     else
-        redirect("/show_login")
+        session[:em] = "Du har redan bokmarkerat detta receptet!"
+        session[:re] = "/recipes"
+        redirect("/error")
     end
     redirect("/recipes")
 end
@@ -213,6 +216,9 @@ post('/logout') do
     redirect("/")
 end
 
+get('/error') do
+    slim(:error)
+end
 
 
 
