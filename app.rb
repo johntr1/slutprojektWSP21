@@ -1,3 +1,4 @@
+require_relative 'model/model.rb'
 require 'sinatra'
 require 'slim'
 require 'sqlite3'
@@ -5,129 +6,120 @@ require 'bcrypt'
 require 'byebug'
 
 enable :sessions
+include Model
 
+t = Time.now 
 i = 0
-t = Time.now
-
-
+# Displays Register Page
+#
 get('/') do
+    session[:time] = t
+    session[:i] = i 
     slim(:register)
 end
 
+#Creates a new user if the length of the username and password is larger than 3 while password_confirm is equal to password.
+#Redirects to '/error' if not met with the conditions. Otherwise redirects to '/showlogin'
+#
+# @param [String] username, The username that the user input
+# @param [String] password, The password that the user input
+# @param [String] password_confirm, The confirmation that the password the user input before is correct
+#
+# @see Model#create_user
 post('/users/new') do
-    username = params[:username]
-    password = params[:password]
-    password_confirm = params[:password_confirm]
-    if username.length <= 3 
-        session[:em] = "Ditt användarnamn är för kort. Vänligen försök igen!"
-        session[:re] = "/"
-        redirect('/error')
-    end
-
-    if password.length <= 3 and password_confirm.length == 0 
-        session[:em] = "Ditt lösenord är för kort. Vänligen försök igen!"
-        session[:re] = "/"
-        redirect('/error')
-    elsif password_confirm.length <= 3 or password != password_confirm
-        session[:em] = "Lösenorden matchade inte. Vänligen försök igen!"
-        session[:re] = "/"
-        redirect('/error')
-    end
-
-    if password_confirm == password
-        db = SQLite3::Database.new('db/matreceptsida.db')
-        pw_digest = BCrypt::Password.create(password)
-        db.execute("INSERT INTO users (username,pw_digest) VALUES (?,?)",username,pw_digest)
-        redirect('/showlogin')
-    else
-        session[:em] = "Lösenorden stämmer ej! Vänligen försök igen."
-        session[:re] = "/"
-        redirect('/error')
-    end
+    register = create_user(params)
 end
 
+#Displays created recipes, bookmarked recipes and options to update created recipes. 
+#The page can only be accessed if logged in.
+#
+# @param [Integer] :id, The users ID that has been saved in a session when logged in
+# @see Model#get_all_user_recipes
+# @see Model#get_all_user_liked_recipes
 get('/recipes') do
-    id = session[:id].to_i
-    if id == 0
-        session[:em] = "Du är tyvärr inte inloggad. Vänligen skapa ett konto eller logga in!"
-        session[:re] = "/"
-        redirect('/error')
-    else
-        db = SQLite3::Database.new('db/matreceptsida.db')
-        db.results_as_hash = true
-        result = db.execute("SELECT * FROM recipes WHERE user_id = ?", id)
-        liked_recipes = db.execute("SELECT * FROM users_recipes_likes_relation INNER JOIN recipes ON users_recipes_likes_relation.recipe_id = recipes.recipe_id WHERE users_recipes_likes_relation.user_id = ?", id)
-    end
+    user_id = session[:id].to_i
+        if user_id == 0
+            session[:em] = "Du är tyvärr inte inloggad. Vänligen skapa ett konto eller logga in!"
+            session[:re] = "/"
+            redirect('/error')
+        else
+            db = SQLite3::Database.new('db/matreceptsida.db')
+            db.results_as_hash = true
+            result = get_all_user_recipes(params)
+            liked_recipes = get_all_user_liked_recipes(params)
+        end    
     slim(:"recipes/index", locals:{recipes:result, liked_recipes:liked_recipes})
 end
 
+#Displays a create form for recipes
+#
+# @see Model#get_all_categories
 get('/recipes/new') do
     db = SQLite3::Database.new('db/matreceptsida.db')
     db.results_as_hash = true
-    result = db.execute("SELECT * FROM categories")
+    result = get_all_categories(params)
     slim(:"recipes/new", locals:{categories:result})
 end
 
+#Creates a new recipe and redirects to '/recipes'
+#
+# @param [Integer] categories1, The ID of the first category
+# @param [Integer] categories2, The ID of the second category
+# @param [Integer] categories3, The ID of the third category
+# @param [String] title, The title of the new recipe
+# @param [String] recipe_id, The ID of the new recipe
+# @param [Integer] :id, The users ID that has been saved in a session when logged in
+# @param [String] content, The instructions in the recipe 
+# @see Model#create_recipe
 post('/recipes/create') do
-    categories1 = params[:categories1]
-    categories2 = params[:categories2]
-    categories3 = params[:categories3]
-    title = params[:title]
-    recipe_id = params[:recipe_id]
-    user_id = session[:id].to_i
-    content = params[:content]
-    db = SQLite3::Database.new('db/matreceptsida.db')
-    db.results_as_hash = true
-    db.execute("INSERT INTO recipes (content, title, user_id) VALUES (?,?,?)", content, title, user_id)
-    result = db.execute("SELECT * FROM recipes WHERE content = ?",content).first
-    recipe_id = result["recipe_id"] 
-    db.execute("INSERT INTO recipes_categories_relation (recipe_id, category_id) VALUES (?, ?)", recipe_id, categories1)
-    db.execute("INSERT INTO recipes_categories_relation (recipe_id, category_id) VALUES (?, ?)", recipe_id, categories2)
-    db.execute("INSERT INTO recipes_categories_relation (recipe_id, category_id) VALUES (?, ?)", recipe_id, categories3)
+    create_recipe = create_recipe(params)
     redirect('/recipes')
 end
 
+#Displays an edit form for the recipe
+#
+# @param [Integer] :id, The ID of the recipe
+# @see Model#get_all_categories
+# @see Model#get_recipe
 get('/recipes/:id/edit') do
-    id = params[:id].to_i
-    title = params[:title]
-    params[:content]
-    db = SQLite3::Database.new('db/matreceptsida.db')
-    db.results_as_hash = true
-    result = db.execute("SELECT * FROM recipes WHERE recipe_id = ?", id).first
-    result2 = db.execute("SELECT * FROM categories")
+    result = get_recipe(params)
+    result2 = get_all_categories(params)
     slim(:"recipes/edit", locals:{recipes:result, categories:result2})
 end
 
+#Displays all recipes created by user with the options to delete or update
+#
+# param[Integer] :id, The users ID that has been saved in a session when logged in
+# @see Model#get_all_user_recipes
 get('/recipes/edit') do
-    user_id = session[:id].to_i
-    db = SQLite3::Database.new('db/matreceptsida.db')
-    db.results_as_hash = true
-    result = db.execute("SELECT * FROM recipes WHERE user_id = ?", user_id)
+    result = get_all_user_recipes(params)
     slim(:"recipes/show_edit", locals:{recipes:result})
 end
 
+#Updates an existing recipe and redirects to '/recipes/edit'
+#
+# @param [Integer] :id, The ID of the recipe
+# @param [Integer] categories1, The ID of the first new category
+# @param [Integer] categories2, The ID of the second new category
+# @param [Integer] categories3, The ID of the third new category
+# @param [String] title, The new title of the recipe
+# @param [String] title, The new instructions in the recipe
+# @see Model#update_recipe
 post('/recipes/:id/update') do
-    recipe_id = params[:id].to_i
-    categories1 = params[:categories1]
-    categories2 = params[:categories2]
-    categories3 = params[:categories3]
-    title = params[:title]
-    content = params[:content]
-    db = SQLite3::Database.new('db/matreceptsida.db')
-    db.execute("UPDATE recipes SET title=?, content=? WHERE recipe_id = ?", title, content, recipe_id)
-    db.execute("DELETE FROM recipes_categories_relation WHERE recipe_id = ?", recipe_id)
-    db.execute("INSERT INTO recipes_categories_relation (recipe_id, category_id) VALUES (?, ?)", recipe_id, categories1)
-    db.execute("INSERT INTO recipes_categories_relation (recipe_id, category_id) VALUES (?, ?)", recipe_id, categories2)
-    db.execute("INSERT INTO recipes_categories_relation (recipe_id, category_id) VALUES (?, ?)", recipe_id, categories3)
-
-   redirect("/recipes/edit")
-
+    updated_recipe = update_recipe(params)
+    redirect("/recipes/edit")
 end
 
+#Displays a login form
+#
 get('/showlogin') do
     slim(:login)
 end
 
+#Attempts to login and updates the session
+#
+# @param [String] username, The username
+# @param [String] password, The password
 post('/login') do
     username = params[:username]
     password = params[:password]
@@ -166,86 +158,91 @@ post('/login') do
     end
 end
 
+#Displays all recipes that are in the database
+#
+# see Model#get_all_recipes
+# see Model#get_all_categories
 get("/recipes/public") do
     db = SQLite3::Database.new('db/matreceptsida.db')
     db.results_as_hash = true
     recipes = db.execute("SELECT * FROM recipes")
     categories = db.execute("SELECT * FROM categories")
     slim(:"recipes/public_show", locals:{recipes:recipes, categories:categories})
-
-
 end
 
+#Displays a recipe in more detail
+#
+# @param [Integer] :id, The ID of the recipe
+# see Model#get_recipe
+# see Model#get_creator_recipe
+# see Model#get_recipe_categories
 get('/recipes/:id') do 
-    id = params[:id].to_i
-    db = SQLite3::Database.new('db/matreceptsida.db')
-    db.results_as_hash = true
-    result = db.execute("SELECT * FROM recipes WHERE recipe_id = ? ", id).first
-    creator_id = result["user_id"]
-    creator = db.execute("SELECT * from users WHERE id = ?", creator_id).first
-    category_id = db.execute("SELECT category_id FROM recipes_categories_relation WHERE recipe_id = ?", id)
-    category_id1 = category_id[0]["category_id"]
-    category_id2 = category_id[1]["category_id"]
-    category_id3 = category_id[2]["category_id"]
-
-    categories = db.execute("SELECT * FROM categories WHERE id = ? or id = ? or id = ?", category_id1, category_id2, category_id3 )
-
+    result = get_recipe(params)
+    creator = get_creator_recipe(params)
+    categories = get_recipe_categories(params)
     slim(:"recipes/show", locals:{result:result, creator:creator, categories:categories})
 end
 
+#Bookmarks a recipe by pressing the like button and redirects to either '/recipes' or '/error'
+#
+# @param [Integer] :id, The ID of the recipe
+# @param [Integer] :id, The ID of the user that has been saved by a session
+# see Model#like_recipe_function
 post('/recipes/:id/like') do
-    recipe_id = params[:id].to_i
-    db = SQLite3::Database.new('db/matreceptsida.db')
-    user_id = session[:id].to_i
-    db.results_as_hash = true
-    check = db.execute("SELECT * FROM users_recipes_likes_relation WHERE user_id = ? and recipe_id = ?", user_id, recipe_id).first
-    if check == nil 
-        db.execute("INSERT INTO users_recipes_likes_relation (recipe_id, user_id) VALUES (?, ?)", recipe_id, user_id)
+    result = like_recipe_function(params)
+    if result != false 
+        redirect("/recipes")
     else
         session[:em] = "Du har redan bokmarkerat detta receptet!"
         session[:re] = "/recipes"
         redirect("/error")
     end
-    redirect("/recipes")
 end
-
+#Removes a bookmark from a bookmarked recipe by pressing the dislike button and redirects to either '/recipes' or '/error'
+#
+# @param [Integer] :id, The ID of the recipe
+# @param [Integer] :id, The ID of the user that has been saved by a session
+# see Model#delete_like_recipe_function(params)
 post('/recipes/:id/dislike') do
-    recipe_id = params[:id].to_i
-    db = SQLite3::Database.new('db/matreceptsida.db')
-    user_id = session[:id].to_i
-    db.results_as_hash = true
-    check = db.execute("SELECT * FROM users_recipes_likes_relation WHERE user_id = ? and recipe_id = ?", user_id, recipe_id).first
-    if check != nil 
-        db.execute("DELETE FROM users_recipes_likes_relation WHERE recipe_id = ? and user_id = ?", recipe_id, user_id)
+    result = delete_like_recipe_function(params)
+    if result != false
+        redirect("/recipes")
     else
-        session[:em] = "Du har inte bokmarkeat detta receptet!"
+        session[:em] = "Du har inte bokmarkerat detta receptet!"
         session[:re] = "/recipes"
         redirect("/error")
     end
-    redirect("/recipes")
 end
 
+#Deletes an existing recipe and redirects to '/recipes'
+#
+# @param [Integer] :id, The ID of the recipe
+# @see Model#delete_recipe
 post('/recipes/:id/delete') do
-    recipe_id = params[:id].to_i
-    db = SQLite3::Database.new('db/matreceptsida.db')
-    db.execute("DELETE FROM recipes WHERE recipe_id = ?", recipe_id)
+    delete = delete_recipe(params)
     redirect('/recipes')
 end
 
+#Displays all recipes that belong to the category ID
+#
+# @param [Integer] :id, The ID of the category
+# see Model#select_all_recipes_in_category
+# see Model#get_category
 get('/category/:id') do
-    category_id = params[:id].to_i
-    db = SQLite3::Database.new('db/matreceptsida.db')
-    db.results_as_hash = true
-    recipes = db.execute("SELECT * FROM recipes_categories_relation INNER JOIN recipes ON recipes_categories_relation.recipe_id = recipes.recipe_id WHERE recipes_categories_relation.category_id = ?", category_id)
-    category = db.execute("SELECT * FROM categories WHERE id = ?", category_id).first
+    recipes = select_all_recipes_in_category(params)
+    category = get_category(params)
     slim(:"recipes/public_show_categories", locals:{recipes:recipes, category:category})
 end
 
+#Logs out the user and redirects to '/'
+#
 post('/logout') do
     session[:id] = 0
     redirect("/")
 end
 
+#Displays the error page
+#
 get('/error') do
     slim(:error)
 end
