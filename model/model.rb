@@ -1,4 +1,52 @@
 module Model
+    # Attempts to get all databse as a hash
+    #
+    def get_database_as_hash(params)
+        db = SQLite3::Database.new('db/matreceptsida.db')
+        db.results_as_hash = true
+        return db
+    end
+
+    # Attempts to get all database 
+    #
+    def get_database(params)
+        db = SQLite3::Database.new('db/matreceptsida.db')
+        return db
+    end
+
+    # Validates the username length
+    #
+    # @param [Hash] params form data
+    # @option params [String] username The username
+    #
+    # @return [Boolean] whether an error has occurred
+    def validate_username_length(params)
+        username = params[:username]
+        if username.length <= 3
+            return false
+        else
+            return true
+        end
+    end
+
+    # Validates the password length and password_confirm length. Checks if password is matching password_confirm
+    #
+    # @param [Hash] params form data
+    # @option params [String] password The password
+    # @option params [String] password_confirm The repeat password
+    #
+    # @return [Boolean] whether an error has occurred
+    def validate_password_length(params)
+        password = params[:password]
+        password_confirm = params[:password_confirm]
+        if password.length <= 3 and password_confirm.length == 0 
+            return true
+        elsif password_confirm.length <= 3 or password != password_confirm
+            return false
+        end
+    end
+            
+
     # Attempts to create a new user
     #
     # @param [Hash] params form data
@@ -9,31 +57,12 @@ module Model
         username = params[:username]
         password = params[:password]
         password_confirm = params[:password_confirm]
-        if username.length <= 3 
-            session[:em] = "Ditt användarnamn är för kort. Vänligen försök igen!"
-            session[:re] = "/"
-            redirect('/error')
-        end
-    
-        if password.length <= 3 and password_confirm.length == 0 
-            session[:em] = "Ditt lösenord är för kort. Vänligen försök igen!"
-            session[:re] = "/"
-            redirect('/error')
-        elsif password_confirm.length <= 3 or password != password_confirm
-            session[:em] = "Lösenorden matchade inte. Vänligen försök igen!"
-            session[:re] = "/"
-            redirect('/error')
-        end
-    
         if password_confirm == password
-            db = SQLite3::Database.new('db/matreceptsida.db')
+            db = get_database(params)
             pw_digest = BCrypt::Password.create(password)
             db.execute("INSERT INTO users (username,pw_digest) VALUES (?,?)",username,pw_digest)
-            redirect('/showlogin')
         else
-            session[:em] = "Lösenorden stämmer ej! Vänligen försök igen."
-            session[:re] = "/"
-            redirect('/error')
+            return false
         end
     end
     #Attempts to retrieve all recipes created by the user
@@ -46,10 +75,8 @@ module Model
     # * :content [String] The instructions in the recipe
     # * :title [String] The name of the recipe
     # * :user_id [Integer] The ID of the user
-    def get_all_user_recipes(params)
-        user_id = session[:id].to_i
-        db = SQLite3::Database.new('db/matreceptsida.db')
-        db.results_as_hash = true
+    def get_all_user_recipes(params, user_id)
+        db = get_database_as_hash(params)
         result = db.execute("SELECT * FROM recipes WHERE user_id = ?", user_id)
         return result
     end
@@ -67,8 +94,7 @@ module Model
     # * :user_recipe_id [Integer] The ID of the connection between user and recipe
     def get_all_user_liked_recipes(params)
         id = session[:id].to_i
-        db = SQLite3::Database.new('db/matreceptsida.db')
-        db.results_as_hash = true
+        db = get_database_as_hash(params)
         liked_recipes = db.execute("SELECT * FROM users_recipes_likes_relation INNER JOIN recipes ON users_recipes_likes_relation.recipe_id = recipes.recipe_id WHERE users_recipes_likes_relation.user_id = ?", id)
         return liked_recipes
     end
@@ -79,8 +105,7 @@ module Model
     # * :id [Integer] The ID of the category
     # * :name [String] The name of the category
     def get_all_categories(params)
-        db = SQLite3::Database.new('db/matreceptsida.db')
-        db.results_as_hash = true
+        db = get_database_as_hash(params)
         result = db.execute("SELECT * FROM categories")
         return result
     end
@@ -93,8 +118,7 @@ module Model
     # * :title [String] The name of the recipe
     # * :user_id [Integer] The ID of the user
     def get_all_recipes(params)
-        db = SQLite3::Database.new('db/matreceptsida.db')
-        db.results_as_hash = true
+        db = get_database_as_hash(params)
         result = db.execute("SELECT * FROM recipes")
         return result
     end
@@ -117,8 +141,7 @@ module Model
         recipe_id = params[:recipe_id]
         user_id = session[:id].to_i
         content = params[:content]
-        db = SQLite3::Database.new('db/matreceptsida.db')
-        db.results_as_hash = true
+        db = get_database_as_hash(params)
         db.execute("INSERT INTO recipes (content, title, user_id) VALUES (?,?,?)", content, title, user_id)
         result = db.execute("SELECT * FROM recipes WHERE content = ?",content).first
         recipe_id = result["recipe_id"] 
@@ -139,8 +162,7 @@ module Model
     # * :user_id [Integer] The ID of the user
     def get_recipe(params)
         id = params[:id].to_i
-        db = SQLite3::Database.new('db/matreceptsida.db')
-        db.results_as_hash = true
+        db = get_database_as_hash(params)
         result = db.execute("SELECT * FROM recipes WHERE recipe_id = ?", id).first
         return result
     end
@@ -156,8 +178,7 @@ module Model
     # * :pw_digest [String] The encrypted password
     def get_creator_recipe(params)
         id = params[:id].to_i
-        db = SQLite3::Database.new('db/matreceptsida.db')
-        db.results_as_hash = true
+        db = get_database_as_hash(params)
         result = get_recipe(params)
         creator_id = result["user_id"]
         creator = db.execute("SELECT * from users WHERE id = ?", creator_id).first
@@ -174,8 +195,7 @@ module Model
     # * :id [Integer] The ID of the category
     def get_recipe_categories(params)
         id = params[:id].to_i
-        db = SQLite3::Database.new('db/matreceptsida.db')
-        db.results_as_hash = true
+        db = get_database_as_hash(params)
         category_id = db.execute("SELECT category_id FROM recipes_categories_relation WHERE recipe_id = ?", id)
         category_id1 = category_id[0]["category_id"]
         category_id2 = category_id[1]["category_id"]
@@ -200,7 +220,7 @@ module Model
         categories3 = params[:categories3]
         title = params[:title]
         content = params[:content]
-        db = SQLite3::Database.new('db/matreceptsida.db')
+        db = get_database(params)
         db.execute("UPDATE recipes SET title=?, content=? WHERE recipe_id = ?", title, content, recipe_id)
         db.execute("DELETE FROM recipes_categories_relation WHERE recipe_id = ?", recipe_id)
         db.execute("INSERT INTO recipes_categories_relation (recipe_id, category_id) VALUES (?, ?)", recipe_id, categories1)
@@ -216,9 +236,8 @@ module Model
     # @return [Boolean] whether an error has occurred
     def like_recipe_function(params)
         recipe_id = params[:id].to_i
-        db = SQLite3::Database.new('db/matreceptsida.db')
         user_id = session[:id].to_i
-        db.results_as_hash = true
+        db = get_database_as_hash(params)
         check = db.execute("SELECT * FROM users_recipes_likes_relation WHERE user_id = ? and recipe_id = ?", user_id, recipe_id).first
         if check == nil 
             result = db.execute("INSERT INTO users_recipes_likes_relation (recipe_id, user_id) VALUES (?, ?)", recipe_id, user_id)
@@ -236,9 +255,8 @@ module Model
     # @return [Boolean] whether an error has occurred
     def delete_like_recipe_function(params)
         recipe_id = params[:id].to_i
-        db = SQLite3::Database.new('db/matreceptsida.db')
         user_id = session[:id].to_i
-        db.results_as_hash = true
+        db = get_database_as_hash(params)
         check = db.execute("SELECT * FROM users_recipes_likes_relation WHERE user_id = ? and recipe_id = ?", user_id, recipe_id).first
         if check != nil 
             result = db.execute("DELETE FROM users_recipes_likes_relation WHERE recipe_id = ? and user_id = ?", recipe_id, user_id)
@@ -254,7 +272,7 @@ module Model
     # @option params [Integer] :id The ID of the recipe
     def delete_recipe(params)
         recipe_id = params[:id].to_i
-        db = SQLite3::Database.new('db/matreceptsida.db')
+        db = get_database(params)
         db.execute("DELETE FROM recipes WHERE recipe_id = ?", recipe_id)
     end
 
@@ -271,8 +289,7 @@ module Model
     # * :user_id [Integer] The users ID
     def select_all_recipes_in_category(params)
         category_id = params[:id].to_i
-        db = SQLite3::Database.new('db/matreceptsida.db')
-        db.results_as_hash = true
+        db = get_database_as_hash(params)
         recipes = db.execute("SELECT * FROM recipes_categories_relation INNER JOIN recipes ON recipes_categories_relation.recipe_id = recipes.recipe_id WHERE recipes_categories_relation.category_id = ?", category_id)
         return recipes
     end
@@ -287,8 +304,7 @@ module Model
     # * :id [Integer] The ID of the category
     def get_category(params)
         category_id = params[:id].to_i
-        db = SQLite3::Database.new('db/matreceptsida.db')
-        db.results_as_hash = true
+        db = get_database_as_hash(params)
         result = db.execute("SELECT * FROM categories WHERE id = ?", category_id).first
         return result
     end

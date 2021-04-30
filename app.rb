@@ -25,7 +25,31 @@ end
 #
 # @see Model#create_user
 post('/users/new') do
-    register = create_user(params)
+
+    if validate_username_length(params) == false
+        session[:em] = "Ditt användarnamn är för kort. Vänligen försök igen!"
+        session[:re] = "/"
+        redirect('/error')
+    end
+
+    if validate_password_length(params) == true
+        session[:em] = "Ditt lösenord är för kort. Vänligen försök igen!"
+        session[:re] = "/"
+        redirect('/error')
+    elsif validate_password_length(params) == false
+        session[:em] = "Lösenorden matchade inte. Vänligen försök igen!"
+        session[:re] = "/"
+        redirect('/error')
+    end
+
+    if create_user(params) == false
+        session[:em] = "Lösenorden stämmer ej! Vänligen försök igen."
+        session[:re] = "/"
+        redirect('/error')
+    else 
+        register = create_user(params)
+        redirect('/showlogin')
+    end
 end
 
 #Displays created recipes, bookmarked recipes and options to update created recipes. 
@@ -35,15 +59,13 @@ end
 # @see Model#get_all_user_recipes
 # @see Model#get_all_user_liked_recipes
 get('/recipes') do
-    user_id = session[:id].to_i
+    user_id = get_user_id()
         if user_id == 0
             session[:em] = "Du är tyvärr inte inloggad. Vänligen skapa ett konto eller logga in!"
             session[:re] = "/"
             redirect('/error')
         else
-            db = SQLite3::Database.new('db/matreceptsida.db')
-            db.results_as_hash = true
-            result = get_all_user_recipes(params)
+            result = get_all_user_recipes(params, get_user_id())
             liked_recipes = get_all_user_liked_recipes(params)
         end    
     slim(:"recipes/index", locals:{recipes:result, liked_recipes:liked_recipes})
@@ -53,8 +75,6 @@ end
 #
 # @see Model#get_all_categories
 get('/recipes/new') do
-    db = SQLite3::Database.new('db/matreceptsida.db')
-    db.results_as_hash = true
     result = get_all_categories(params)
     slim(:"recipes/new", locals:{categories:result})
 end
@@ -144,7 +164,7 @@ post('/login') do
         session[:em] = "Du har skrivit fel lösenord för många gånger! Vänligen vänta en stund."
         session[:re] = "/showlogin"
         #Time.now + (x) Ändra x beroende på hur lång cooldown-time man vill ha
-        session[:time] = Time.now + (60))
+        session[:time] = Time.now + (60)
         t = session[:time]
         i +=1 
         redirect("/error")
@@ -164,8 +184,8 @@ end
 get("/recipes/public") do
     db = SQLite3::Database.new('db/matreceptsida.db')
     db.results_as_hash = true
-    recipes = db.execute("SELECT * FROM recipes")
-    categories = db.execute("SELECT * FROM categories")
+    recipes = get_all_recipes(params)
+    categories = get_all_categories(params)
     slim(:"recipes/public_show", locals:{recipes:recipes, categories:categories})
 end
 
@@ -245,7 +265,11 @@ end
 get('/error') do
     slim(:error)
 end
-
+#Gets the session of the user_id
+#
+def get_user_id()
+    return session[:id]
+end
 
 
 
