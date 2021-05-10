@@ -99,6 +99,23 @@ module Model
         return liked_recipes
     end
 
+    #Retrieves all row of data from the username
+    #
+    # @param [String] params form data
+    # @option params[String] username The users username
+    #
+    # @return [Hash]
+    # * :id [Integer] The ID of the user
+    # * :username [String] The users username
+    # * :pw_digest [String] The encrypted password
+    def get_user(params)
+        username = params[:username]
+        db = SQLite3::Database.new('db/matreceptsida.db')
+        db.results_as_hash = true
+        result = db.execute("SELECT * FROM users WHERE username = ?",username).first
+        return result
+    end
+
     #Attempts to get all categories from the categories table
     #
     # @return [Hash]
@@ -148,6 +165,22 @@ module Model
         db.execute("INSERT INTO recipes_categories_relation (recipe_id, category_id) VALUES (?, ?)", recipe_id, categories1)
         db.execute("INSERT INTO recipes_categories_relation (recipe_id, category_id) VALUES (?, ?)", recipe_id, categories2)
         db.execute("INSERT INTO recipes_categories_relation (recipe_id, category_id) VALUES (?, ?)", recipe_id, categories3)
+    end
+
+    #Attempts to login the user if correct password and username is inserted
+    # 
+    # @param [Hash] params form data
+    # @option params [String] password The users password
+    #
+    # @return [Integer]
+    def login(params, i, t)
+        password = params[:password]
+        pwdigest = get_user(params)["pw_digest"]
+        if BCrypt::Password.new(pwdigest) == password and Time.now >= t
+            return 1  
+        elsif i >= 5
+            return 2
+        end
     end
 
     #Attempts to get one single recipe from the database

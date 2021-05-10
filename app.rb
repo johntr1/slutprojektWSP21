@@ -134,37 +134,31 @@ get('/showlogin') do
     slim(:login)
 end
 
-#Attempts to login and updates the session
+#Attempts to login and updates the session. Stops user from logging in with a cooldown-timer if wrong password is written more than 5 times. 
 #
 # @param [String] username, The username
 # @param [String] password, The password
+# @see Model#get_user
+# @see Model#login
 post('/login') do
-    username = params[:username]
     password = params[:password]
     db = SQLite3::Database.new('db/matreceptsida.db')
-    db.results_as_hash = true
-    result = db.execute("SELECT * FROM users WHERE username = ?",username).first
-    if result != nil
-        pwdigest = result["pw_digest"]
-        id = result["id"]
-    else
+    if get_user(params) == nil
         session[:em] = "Kontot existerar inte. Vänligen registrera ett konto"
         session[:re] = "/"
         redirect("/error")
     end
 
 
-    if BCrypt::Password.new(pwdigest) == password and Time.now >= t
-        session[:id] = id
-        session[:username] = username
+    if login(params, i, t) == 1
+        session[:id] = get_user(params)["id"]
         i = 0 
         redirect('/recipes')
-    
-    elsif i >= 5
+    elsif login(params, i, t) == 2
         session[:em] = "Du har skrivit fel lösenord för många gånger! Vänligen vänta en stund."
         session[:re] = "/showlogin"
         #Time.now + (x) Ändra x beroende på hur lång cooldown-time man vill ha
-        session[:time] = Time.now + (60)
+        session[:time] = Time.now + (10)
         t = session[:time]
         i +=1 
         redirect("/error")
@@ -182,8 +176,6 @@ end
 # see Model#get_all_recipes
 # see Model#get_all_categories
 get("/recipes/public") do
-    db = SQLite3::Database.new('db/matreceptsida.db')
-    db.results_as_hash = true
     recipes = get_all_recipes(params)
     categories = get_all_categories(params)
     slim(:"recipes/public_show", locals:{recipes:recipes, categories:categories})
