@@ -29,6 +29,18 @@ module Model
         end
     end
 
+    def validate_existing_user(params)
+        db =  get_database_as_hash(params)
+        username = params[:username]
+        if get_user(params) != nil
+            return true
+        else
+            return false
+        end
+    end
+
+
+
     # Validates the password length and password_confirm length. Checks if password is matching password_confirm
     #
     # @param [Hash] params form data
@@ -110,8 +122,7 @@ module Model
     # * :pw_digest [String] The encrypted password
     def get_user(params)
         username = params[:username]
-        db = SQLite3::Database.new('db/matreceptsida.db')
-        db.results_as_hash = true
+        db = get_database_as_hash(params)
         result = db.execute("SELECT * FROM users WHERE username = ?",username).first
         return result
     end

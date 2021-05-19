@@ -42,11 +42,17 @@ post('/users/new') do
         redirect('/error')
     end
 
+    if validate_existing_user(params) == true
+        session[:em] = "Kontot existerar redan! Vänligen försök igen."
+        session[:re] = "/"
+        redirect('/error')
+    end
+
     if create_user(params) == false
         session[:em] = "Lösenorden stämmer ej! Vänligen försök igen."
         session[:re] = "/"
         redirect('/error')
-    else 
+    else
         register = create_user(params)
         redirect('/showlogin')
     end
