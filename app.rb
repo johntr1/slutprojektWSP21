@@ -142,7 +142,7 @@ end
 # @see Model#login
 post('/login') do
     password = params[:password]
-    db = SQLite3::Database.new('db/matreceptsida.db')
+    db = get_database(params)
     if get_user(params) == nil
         session[:em] = "Kontot existerar inte. Vänligen registrera ett konto"
         session[:re] = "/"
