@@ -158,7 +158,7 @@ post('/login') do
         session[:em] = "Du har skrivit fel lösenord för många gånger! Vänligen vänta en stund."
         session[:re] = "/showlogin"
         #Time.now + (x) Ändra x beroende på hur lång cooldown-time man vill ha
-        session[:time] = Time.now + (10)
+        session[:time] = Time.now + (60)
         t = session[:time]
         i +=1 
         redirect("/error")
