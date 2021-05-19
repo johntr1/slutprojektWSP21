@@ -29,6 +29,12 @@ module Model
         end
     end
 
+    # Checks if the user already exists in the database
+    #
+    # @param [Hash] params form data
+    # @option params [String] username The username
+    #
+    # @return [Boolean] whether the user exists or not
     def validate_existing_user(params)
         db =  get_database_as_hash(params)
         username = params[:username]
