@@ -1,5 +1,5 @@
 module Model
-    # Attempts to get all databse as a hash
+    # Attempts to get all database as a hash
     #
     def get_database_as_hash(params)
         db = SQLite3::Database.new('db/matreceptsida.db')
@@ -93,7 +93,7 @@ module Model
     # * :user_id [Integer] The ID of the user
     # * :user_recipe_id [Integer] The ID of the connection between user and recipe
     def get_all_user_liked_recipes(params)
-        id = session[:id].to_i
+        id = get_user_id()
         db = get_database_as_hash(params)
         liked_recipes = db.execute("SELECT * FROM users_recipes_likes_relation INNER JOIN recipes ON users_recipes_likes_relation.recipe_id = recipes.recipe_id WHERE users_recipes_likes_relation.user_id = ?", id)
         return liked_recipes
@@ -156,7 +156,7 @@ module Model
         categories3 = params[:categories3]
         title = params[:title]
         recipe_id = params[:recipe_id]
-        user_id = session[:id].to_i
+        user_id = get_user_id()
         content = params[:content]
         db = get_database_as_hash(params)
         db.execute("INSERT INTO recipes (content, title, user_id) VALUES (?,?,?)", content, title, user_id)
@@ -269,7 +269,7 @@ module Model
     # @return [Boolean] whether an error has occurred
     def like_recipe_function(params)
         recipe_id = params[:id].to_i
-        user_id = session[:id].to_i
+        user_id = get_user_id()
         db = get_database_as_hash(params)
         check = db.execute("SELECT * FROM users_recipes_likes_relation WHERE user_id = ? and recipe_id = ?", user_id, recipe_id).first
         if check == nil 
@@ -281,14 +281,14 @@ module Model
     end
     #Attempts to delete the bookmark from a currently bookmarked recipe
     #
-    # @param [Integer] :id The ID of the user saved by a session
+    # @param [Integer] user_id The ID of the user saved by a session in app.rb
     # @param [Hash] params form data
     # @option params [Integer] :id The ID of the recipe
     #
     # @return [Boolean] whether an error has occurred
     def delete_like_recipe_function(params)
         recipe_id = params[:id].to_i
-        user_id = session[:id].to_i
+        user_id = get_user_id()
         db = get_database_as_hash(params)
         check = db.execute("SELECT * FROM users_recipes_likes_relation WHERE user_id = ? and recipe_id = ?", user_id, recipe_id).first
         if check != nil 

@@ -65,7 +65,7 @@ get('/recipes') do
             session[:re] = "/"
             redirect('/error')
         else
-            result = get_all_user_recipes(params, get_user_id())
+            result = get_all_user_recipes(params, user_id)
             liked_recipes = get_all_user_liked_recipes(params)
         end    
     slim(:"recipes/index", locals:{recipes:result, liked_recipes:liked_recipes})
@@ -110,7 +110,7 @@ end
 # param[Integer] :id, The users ID that has been saved in a session when logged in
 # @see Model#get_all_user_recipes
 get('/recipes/edit') do
-    result = get_all_user_recipes(params)
+    result = get_all_user_recipes(params, get_user_id())
     slim(:"recipes/show_edit", locals:{recipes:result})
 end
 
